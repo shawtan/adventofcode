@@ -3,8 +3,10 @@ const fs = require('node:fs');
 // const input = fs.readFileSync('example.txt', 'utf8');
 const input = fs.readFileSync('input.txt', 'utf8');
 
-const data = input.split('\n').map(x => x.split('').filter(y => y != '\r' && y != ' '));
+let data = input.split('\n').map(x => x.split('').filter(y => y != '\r' && y != ' '));
+data = data.slice(0, data.length - 1);
 
+// console.log(data);
 const findS = () => {
     for (let i = 0; i < data.length; i++) {
         for (let j = 0; j < data[i].length; j++) {
@@ -169,24 +171,57 @@ const parseSymbol = (i, j) => {
     return check;
 }
 
+const WALL = '#';
 const OUTSIDE = "O";
+const EMPTY = 'I';
+const wallmap = [];
+
+const createWallmap = () => {
+    for (let i = 0; i < data.length; i++) {
+        wallmap[i * 3] = [];
+        wallmap[i * 3 + 1] = [];
+        wallmap[i * 3 + 2] = [];
+        for (let j = 0; j < data[0].length; j++) {
+            for (x = i * 3; x < i * 3 + 3; x++) {
+                for (y = j * 3; y < j * 3 + 3; y++) {
+                    wallmap[x][y] = EMPTY;
+                }
+            }
+
+            if (dp[i][j] !== MAX) {
+                const char = data[i][j];
+                const charDirections = SYMBOLS[char];
+                wallmap[i * 3 + 1][j * 3 + 1] = WALL;
+                if (charDirections[NORTH]) {
+                    wallmap[i * 3][j * 3 + 1] = WALL;
+                }
+                if (charDirections[EAST]) {
+                    wallmap[i * 3 + 1][j * 3 + 2] = WALL;
+                }
+                if (charDirections[SOUTH]) {
+                    wallmap[i * 3 + 2][j * 3 + 1] = WALL;
+                }
+                if (charDirections[WEST]) {
+                    wallmap[i * 3 + 1][j * 3] = WALL;
+                }
+            }
+        }
+    }
+}
 
 const parseHoles = (i, j) => {
 
-    if (i < 0 || i >= data.length) {
+    if (i < 0 || i >= wallmap.length) {
         return [];
     }
-    if (j < 0 || j >= data[0].length) {
+    if (j < 0 || j >= wallmap[0].length) {
         return [];
     }
-    if (dp[i][j] === OUTSIDE) {
-        return [];
-    }
-    if (dp[i][j] < MAX) {
+    if (wallmap[i][j] !== EMPTY) {
         return [];
     }
 
-    dp[i][j] = OUTSIDE;
+    wallmap[i][j] = OUTSIDE;
     let offsets = [
         [-1, 0, SOUTH],
         [0, -1, EAST],
@@ -201,20 +236,9 @@ const parseHoles = (i, j) => {
 }
 
 const printGrid = () => {
-    console.log("Grid:");
-    for (let i = 0; i < dp.length; i++) {
-        let row = "";
-        for (let j = 0; j < dp[0].length; j++) {
-            const n = dp[i][j];
-            if (n === "O") {
-                row += "O";
-            } else if (n === MAX) {
-                row += "#";
-            } else {
-                row += data[i][j];
-            }
-        }
-        console.log(row);
+    console.log("Grid:", wallmap.length, wallmap[0].length);
+    for (let i = 0; i < wallmap.length; i++) {
+        console.log(wallmap[i].join(''));
     }
     console.log("END Grid:");
 }
@@ -237,16 +261,18 @@ const partone = () => {
 
 const parttwo = () => {
     partone(); // calc dp
+    createWallmap();
+    // printGrid();
 
     let queue = [];
 
-    for (let i = 0; i < data.length; i++) {
+    for (let i = 0; i < wallmap.length; i++) {
         queue.push([i, 0]);
-        queue.push([i, data[0].length - 1]);
+        queue.push([i, wallmap[0].length - 1]);
     }
-    for (let i = 0; i < data[0].length; i++) {
+    for (let i = 0; i < wallmap[0].length; i++) {
         queue.push([0, i]);
-        queue.push([data.length - 1, i]);
+        queue.push([wallmap.length - 1, i]);
     }
 
     while (queue.length > 0) {
@@ -262,9 +288,17 @@ const parttwo = () => {
     printGrid();
     // console.log(dp);
     let sum = 0;
-    for (let row of dp) {
-        for (let n of row) {
-            if (n === MAX) {
+    for (let i = 0; i < data.length; i++) {
+        for (let j = 0; j < data[0].length; j++) {
+            let isEmpty = true;
+            for (x = i * 3; x < i * 3 + 3; x++) {
+                for (y = j * 3; y < j * 3 + 3; y++) {
+                    if (wallmap[x][y] !== EMPTY) {
+                        isEmpty = false;
+                    }
+                }
+            }
+            if (isEmpty) {
                 sum++;
             }
         }
